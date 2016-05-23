@@ -5,15 +5,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/nlopes/slack"
 	"github.com/spf13/viper"
 )
 
 const SLACK_NAME = "agrakari"
 
 var CHARACTERS = map[string]bool{"Maaya Saraki": true, "Indy Drone 4": true}
-
-var slackApi *slack.Client
 
 func (self *Job) ParseDate() error {
 	endDate, err := time.Parse(DateFormat, self.EndDateString)
@@ -31,13 +28,7 @@ func (self *Job) Alert() {
 	if self.IsSuperceded() {
 		return
 	}
-	params := slack.PostMessageParameters{
-		Username: "ijns",
-	}
-	_, _, err := slackApi.PostMessage("@"+SLACK_NAME, self.String(), params)
-	if err != nil {
-		log.Print(err)
-	}
+	self.Alerter.Alert(self, SLACK_NAME)
 }
 func (self *Job) String() string {
 	return fmt.Sprintf("%s // %s will be delivered in 1 minute", self.Installer, self.Blueprint)
@@ -72,11 +63,11 @@ var allJobs = make(map[Job]bool)
 
 const DateFormat = "2006-01-02 15:04:05"
 
-func poll(ijr IndustryJobsRequester) error {
+func poll(requester IndustryJobsRequester, alerter Alerter) error {
 	vCode := viper.GetString("vcode")
 	keyID := viper.GetString("keyid")
 
-	body, err := ijr.GetXML(vCode, keyID)
+	body, err := requester.GetXML(vCode, keyID)
 	if err != nil {
 		return err
 	}
@@ -91,7 +82,7 @@ func poll(ijr IndustryJobsRequester) error {
 	activeJobIDs := make(map[int]bool)
 
 	for _, job := range jobs {
-		addJob(job)
+		addJob(job, alerter)
 		activeJobIDs[job.ID] = true
 	}
 	// Prune the list of jobs
@@ -106,9 +97,12 @@ func poll(ijr IndustryJobsRequester) error {
 
 // Add a job if it is interesting and does not exist, and return whether it
 // was added.
-func addJob(job Job) bool {
+func addJob(job Job, alerter Alerter) bool {
 	if _, ok := CHARACTERS[job.Installer]; ok {
+		// TODO stop poking into the job here
 		job.ParseDate()
+		// TODO job should not alert themselves
+		job.Alerter = alerter
 		if _, ok := allJobs[job]; !ok {
 			job.MakeAlert()
 			allJobs[job] = true
@@ -124,12 +118,11 @@ func main() {
 	viper.BindEnv("keyid")
 	viper.BindEnv("slack_token")
 
-	slackApi = slack.New(viper.GetString("slack_token"))
-
-	ijh := new(XmlApiIndustryJobsRequester)
+	requester := new(XmlApiIndustryJobsRequester)
+	alerter := NewSlackAlerter(viper.GetString("slack_token"))
 
 	for {
-		if err := poll(ijh); err != nil {
+		if err := poll(requester, alerter); err != nil {
 			log.Print(err)
 		}
 		time.Sleep(15 * time.Minute)

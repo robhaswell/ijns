@@ -3,7 +3,6 @@ package main
 import (
 	"testing"
 
-	"github.com/nlopes/slack"
 	"github.com/spf13/viper"
 )
 
@@ -100,6 +99,7 @@ func TestJobEquality(t *testing.T) {
 }
 
 func TestAddJob(t *testing.T) {
+	alerter := &FakeAlerter{}
 	allJobs = make(map[Job]bool)
 	j1 := Job{
 		ID:            1,
@@ -120,12 +120,12 @@ func TestAddJob(t *testing.T) {
 
 	var added bool
 
-	added = addJob(j1)
+	added = addJob(j1, alerter)
 	if !added {
 		t.Fatal("Should have added first job")
 	}
 
-	added = addJob(j2)
+	added = addJob(j2, alerter)
 	if added {
 		t.Fatal("Should not have added second job")
 	}
@@ -141,12 +141,12 @@ func TestSlackAlert(t *testing.T) {
 		t.Skip("Token not specified")
 	}
 
-	slackApi = slack.New(token)
-	j1 := Job{
+	alerter := NewSlackAlerter(token)
+	j1 := &Job{
 		ID:            1,
 		Blueprint:     "Test Item Blueprint I",
 		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 01:01:01",
 	}
-	j1.Alert()
+	alerter.Alert(j1, "agrakari")
 }
