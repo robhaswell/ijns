@@ -28,7 +28,7 @@ func (xmlapi *XmlApiIndustryJobsRequester) GetXML(vCode string, keyID string) ([
 
 type IndustryJobs struct {
 	XMLName xml.Name `xml:"eveapi"`
-	Jobs []Job `xml:"result>rowset>row"`
+	Jobs    []Job    `xml:"result>rowset>row"`
 }
 
 type Job struct {

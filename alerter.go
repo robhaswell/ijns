@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/nlopes/slack"
 	"log"
+
+	"github.com/nlopes/slack"
 )
 
 type Alerter interface {
@@ -29,7 +30,7 @@ func (s *SlackAlerter) Alert(job *Job, username string) {
 	}
 }
 
-type FakeAlerter struct {}
+type FakeAlerter struct{}
 
 func (s *FakeAlerter) Alert(job *Job, username string) {
 	// no-op

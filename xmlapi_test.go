@@ -20,15 +20,15 @@ func TestParseXmlApiResponse(t *testing.T) {
 
 	expected := []Job{
 		Job{
-			ID: 1,
-			Blueprint: "Test Item Blueprint I",
-			Installer: "Test Character",
+			ID:            1,
+			Blueprint:     "Test Item Blueprint I",
+			Installer:     "Test Character",
 			EndDateString: "2016-01-02 06:07:08",
 		},
 		Job{
-			ID: 2,
-			Blueprint: "Test Item Blueprint I",
-			Installer: "Test Character",
+			ID:            2,
+			Blueprint:     "Test Item Blueprint I",
+			Installer:     "Test Character",
 			EndDateString: "2016-01-02 06:07:08",
 		},
 	}
