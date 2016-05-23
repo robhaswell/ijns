@@ -88,12 +88,15 @@ func poll(ijr IndustryJobsRequester) error {
 
 	log.Printf("Retrieved %d jobs", len(jobs))
 
+	activeJobIDs := make(map[int]bool)
+
 	for _, job := range jobs {
 		addJob(job)
+		activeJobIDs[job.ID] = true
 	}
 	// Prune the list of jobs
 	for job, _ := range allJobs {
-		if time.Since(job.EndDate) > time.Minute {
+		if !activeJobIDs[job.ID] {
 			log.Printf("Deleting job %d", job.ID)
 			delete(allJobs, job)
 		}
