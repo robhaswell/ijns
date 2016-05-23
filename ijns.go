@@ -3,9 +3,7 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/nlopes/slack"
@@ -96,19 +94,11 @@ var allJobs = make(map[Job]bool)
 
 const DateFormat = "2006-01-02 15:04:05"
 
-func poll() error {
+func poll(ijr IndustryJobsRequester) error {
 	vCode := viper.GetString("vcode")
 	keyID := viper.GetString("keyid")
 
-	resp, err := http.Get(fmt.Sprintf(
-		"https://api.eveonline.com/corp/IndustryJobs.xml.aspx?keyID=%s&vCode=%s",
-		keyID, vCode))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := ijr.GetXML(vCode, keyID)
 	if err != nil {
 		return err
 	}
@@ -155,8 +145,10 @@ func main() {
 
 	slackApi = slack.New(viper.GetString("slack_token"))
 
+	ijh := new(XmlApiIndustryJobsRequester)
+
 	for {
-		if err := poll(); err != nil {
+		if err := poll(ijh); err != nil {
 			log.Print(err)
 		}
 		time.Sleep(15 * time.Minute)
