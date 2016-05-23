@@ -10,37 +10,37 @@ import (
 func TestSuperceded(t *testing.T) {
 	allJobs = make(map[Job]bool)
 	j1 := Job{
-		ID: 1,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            1,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	j1.ParseDate()
 	j2 := Job{
-		ID: 2,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            2,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 01:01:02",
 	}
 	j2.ParseDate()
 	j3 := Job{
-		ID: 3,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            3,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 01:02:03",
 	}
 	j3.ParseDate()
 	j4 := Job{
-		ID: 4,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            4,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 02:02:03",
 	}
 	j4.ParseDate()
 	j5 := Job{
-		ID: 5,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            5,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 02:02:03",
 	}
 	j5.ParseDate()
@@ -83,15 +83,15 @@ func TestSuperceded(t *testing.T) {
 
 func TestJobEquality(t *testing.T) {
 	j1 := Job{
-		ID: 1,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            1,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	j2 := Job{
-		ID: 1,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            1,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	if j1 != j2 {
@@ -102,15 +102,15 @@ func TestJobEquality(t *testing.T) {
 func TestAddJob(t *testing.T) {
 	allJobs = make(map[Job]bool)
 	j1 := Job{
-		ID: 1,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            1,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	j2 := Job{
-		ID: 1,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            1,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 01:01:01",
 	}
 
@@ -143,9 +143,9 @@ func TestSlackAlert(t *testing.T) {
 
 	slackApi = slack.New(token)
 	j1 := Job{
-		ID: 1,
-		Blueprint: "Test Item Blueprint I",
-		Installer: "Maaya Saraki",
+		ID:            1,
+		Blueprint:     "Test Item Blueprint I",
+		Installer:     "Maaya Saraki",
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	j1.Alert()

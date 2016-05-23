@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/xml"
 	"fmt"
 	"log"
 	"time"
@@ -16,34 +15,12 @@ var CHARACTERS = map[string]bool{"Maaya Saraki": true, "Indy Drone 4": true}
 
 var slackApi *slack.Client
 
-type EVEAPI struct {
-	XMLName xml.Name `xml:"eveapi"`
-	Result  Result   `xml:"result"`
-}
-
-type Result struct {
-	XMLName xml.Name `xml:"result"`
-	Rowset  Rowset   `xml:"rowset"`
-}
-
-type Rowset struct {
-	XMLName xml.Name `xml:"rowset"`
-	Job     []Job    `xml:"row"`
-}
-
-type Job struct {
-	XMLName       xml.Name `xml:"row"`
-	ID            int      `xml:"jobID,attr"`
-	Blueprint     string   `xml:"blueprintTypeName,attr"`
-	Installer     string   `xml:"installerName,attr"`
-	EndDateString string   `xml:"endDate,attr"`
-	EndDate       time.Time
-}
 func (self *Job) ParseDate() error {
 	endDate, err := time.Parse(DateFormat, self.EndDateString)
 	self.EndDate = endDate
 	return err
 }
+
 // Alert 1 minute before the job is due to complete
 func (self *Job) MakeAlert() {
 	duration := self.EndDate.Sub(time.Now()) - time.Minute
@@ -65,10 +42,11 @@ func (self *Job) Alert() {
 func (self *Job) String() string {
 	return fmt.Sprintf("%s // %s will be delivered in 1 minute", self.Installer, self.Blueprint)
 }
+
 // If there is another job for the same blueprint & character due within the
 // next minute, return false
 func (self Job) IsSuperceded() bool {
-	for job, _ := range(allJobs) {
+	for job, _ := range allJobs {
 		if job == self {
 			continue
 		}
@@ -103,18 +81,18 @@ func poll(ijr IndustryJobsRequester) error {
 		return err
 	}
 
-	var eveapi EVEAPI
-	xml.Unmarshal(body, &eveapi)
-
-	jobs := eveapi.Result.Rowset.Job
+	jobs, err := ParseXmlApiResponse(body)
+	if err != nil {
+		return err
+	}
 
 	log.Printf("Retrieved %d jobs", len(jobs))
 
-	for _, job := range(jobs) {
+	for _, job := range jobs {
 		addJob(job)
 	}
 	// Prune the list of jobs
-	for job, _ := range(allJobs) {
+	for job, _ := range allJobs {
 		if time.Since(job.EndDate) > time.Minute {
 			log.Printf("Deleting job %d", job.ID)
 			delete(allJobs, job)
