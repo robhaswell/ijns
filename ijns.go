@@ -64,6 +64,7 @@ var allJobs = make(map[Job]bool)
 const DateFormat = "2006-01-02 15:04:05"
 
 func poll(requester IndustryJobsRequester, alerter Alerter) error {
+	// TODO: Put this in the requester constructor (and make one)
 	vCode := viper.GetString("vcode")
 	keyID := viper.GetString("keyid")
 
