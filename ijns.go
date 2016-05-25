@@ -64,11 +64,7 @@ var allJobs = make(map[Job]bool)
 const DateFormat = "2006-01-02 15:04:05"
 
 func mainLoop(requester IndustryJobsRequester, alerter Alerter) error {
-	// TODO: Put this in the requester constructor (and make one)
-	vCode := viper.GetString("vcode")
-	keyID := viper.GetString("keyid")
-
-	body, err := requester.GetXML(vCode, keyID)
+	body, err := requester.GetXML()
 	if err != nil {
 		return err
 	}
@@ -119,7 +115,7 @@ func main() {
 	viper.BindEnv("keyid")
 	viper.BindEnv("slack_token")
 
-	requester := new(XmlApiIndustryJobsRequester)
+	requester := NewXmlApiIndustryJobsRequester(viper.GetString("vcode"), viper.GetString("keyid"))
 	alerter := NewSlackAlerter(viper.GetString("slack_token"))
 
 	for {

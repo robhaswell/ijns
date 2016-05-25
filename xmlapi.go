@@ -9,15 +9,28 @@ import (
 )
 
 type IndustryJobsRequester interface {
-	GetXML(string, string) ([]byte, error)
+	GetXML() ([]byte, error)
 }
 
-type XmlApiIndustryJobsRequester struct {}
+type XmlApiIndustryJobsRequester struct {
+	vCode, keyID string
+}
 
-func (xmlapi *XmlApiIndustryJobsRequester) GetXML(vCode string, keyID string) ([]byte, error) {
+func NewXmlApiIndustryJobsRequester(vCode, keyID string) *XmlApiIndustryJobsRequester {
+	xmlapi := &XmlApiIndustryJobsRequester{}
+	xmlapi.SetApiCredentials(vCode, keyID)
+	return xmlapi
+}
+
+func (xmlapi *XmlApiIndustryJobsRequester) SetApiCredentials(vCode, keyID string) {
+	xmlapi.vCode = vCode
+	xmlapi.keyID = keyID
+}
+
+func (xmlapi *XmlApiIndustryJobsRequester) GetXML() ([]byte, error) {
 	resp, err := http.Get(fmt.Sprintf(
 		"https://api.eveonline.com/corp/IndustryJobs.xml.aspx?keyID=%s&vCode=%s",
-		keyID, vCode))
+		xmlapi.keyID, xmlapi.vCode))
 	if err != nil {
 		return []byte{}, err
 	}
@@ -34,7 +47,7 @@ func (fake *FakeIndustryJobsRequester) SetResponse(xml []byte) {
 	fake.xmlResponse = xml
 }
 
-func (fake *FakeIndustryJobsRequester) GetXML(a string, b string) ([]byte, error) {
+func (fake *FakeIndustryJobsRequester) GetXML() ([]byte, error) {
 	return fake.xmlResponse, nil
 }
 
