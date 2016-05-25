@@ -37,7 +37,7 @@ func (self *Job) String() string {
 // If there is another job for the same blueprint & character due within the
 // next minute, return false
 func (self Job) IsSuperceded() bool {
-	for job, _ := range allJobs {
+	for job := range allJobs {
 		if job == self {
 			continue
 		}
@@ -87,7 +87,7 @@ func poll(requester IndustryJobsRequester, alerter Alerter) error {
 		activeJobIDs[job.ID] = true
 	}
 	// Prune the list of jobs
-	for job, _ := range allJobs {
+	for job := range allJobs {
 		if !activeJobIDs[job.ID] {
 			log.Printf("Deleting job %d", job.ID)
 			delete(allJobs, job)
