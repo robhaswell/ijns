@@ -180,7 +180,3 @@ func TestSimpleE2E (t *testing.T) {
 		t.Fatal("Unexpected alert event", event)
 	}
 }
-
-func TestDockerCloudFailedBuild (t *testing.T) {
-	t.Fatal("Intentional failure.")
-}
