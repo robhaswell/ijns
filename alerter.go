@@ -30,8 +30,21 @@ func (s *SlackAlerter) Alert(job *Job, username string) {
 	}
 }
 
-type FakeAlerter struct{}
+type FakeAlerter struct {
+	Chan chan FakeAlertEvent
+}
+
+func NewFakeAlerter() *FakeAlerter {
+	fake := FakeAlerter{}
+	fake.Chan = make(chan FakeAlertEvent)
+	return &fake
+}
 
 func (s *FakeAlerter) Alert(job *Job, username string) {
-	// no-op
+	s.Chan <- FakeAlertEvent{job, username}
+}
+
+type FakeAlertEvent struct {
+	Job *Job
+	Username string
 }

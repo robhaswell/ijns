@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"testing"
+	"time"
+	"log"
 
 	"github.com/spf13/viper"
 )
@@ -149,4 +152,31 @@ func TestSlackAlert(t *testing.T) {
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	alerter.Alert(j1, "agrakari")
+}
+
+// XML containing a job 1m1sin the future results in a job being alerted in 1s.
+func TestSimpleE2E (t *testing.T) {
+	xml := []byte(fmt.Sprintf(`<?xml version='1.0' encoding='UTF-8'?>
+<eveapi version="2">
+  <result>
+    <rowset name="jobs" key="jobID" columns="jobID,installerName,blueprintTypeName,endDate">
+      <row jobID="1" installerName="Fake Character" blueprintTypeName="Test Item Blueprint I" endDate="%v" />
+    </rowset>
+  </result>
+</eveapi>`, time.Now().UTC().Add(time.Minute + time.Second).Format(DateFormat)))
+	requester := &FakeIndustryJobsRequester{}
+	requester.SetResponse(xml)
+
+	alerter := NewFakeAlerter()
+
+	if err := mainLoop(requester, alerter); err != nil {
+		t.Fatal(err)
+	}
+
+	event := <-alerter.Chan
+	log.Print(event)
+
+	if event.Job.ID != 1 {
+		t.Fatal("Unexpected alert event", event)
+	}
 }

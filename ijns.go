@@ -10,7 +10,7 @@ import (
 
 const SLACK_NAME = "agrakari"
 
-var CHARACTERS = map[string]bool{"Maaya Saraki": true, "Indy Drone 4": true}
+var CHARACTERS = map[string]bool{"Maaya Saraki": true, "Indy Drone 4": true, "Fake Character": true}
 
 func (self *Job) ParseDate() error {
 	endDate, err := time.Parse(DateFormat, self.EndDateString)
@@ -63,7 +63,7 @@ var allJobs = make(map[Job]bool)
 
 const DateFormat = "2006-01-02 15:04:05"
 
-func poll(requester IndustryJobsRequester, alerter Alerter) error {
+func mainLoop(requester IndustryJobsRequester, alerter Alerter) error {
 	// TODO: Put this in the requester constructor (and make one)
 	vCode := viper.GetString("vcode")
 	keyID := viper.GetString("keyid")
@@ -123,7 +123,7 @@ func main() {
 	alerter := NewSlackAlerter(viper.GetString("slack_token"))
 
 	for {
-		if err := poll(requester, alerter); err != nil {
+		if err := mainLoop(requester, alerter); err != nil {
 			log.Print(err)
 		}
 		time.Sleep(15 * time.Minute)

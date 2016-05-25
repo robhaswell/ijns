@@ -12,7 +12,7 @@ type IndustryJobsRequester interface {
 	GetXML(string, string) ([]byte, error)
 }
 
-type XmlApiIndustryJobsRequester struct{}
+type XmlApiIndustryJobsRequester struct {}
 
 func (xmlapi *XmlApiIndustryJobsRequester) GetXML(vCode string, keyID string) ([]byte, error) {
 	resp, err := http.Get(fmt.Sprintf(
@@ -24,6 +24,18 @@ func (xmlapi *XmlApiIndustryJobsRequester) GetXML(vCode string, keyID string) ([
 	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)
+}
+
+type FakeIndustryJobsRequester struct {
+	xmlResponse []byte
+}
+
+func (fake *FakeIndustryJobsRequester) SetResponse(xml []byte) {
+	fake.xmlResponse = xml
+}
+
+func (fake *FakeIndustryJobsRequester) GetXML(a string, b string) ([]byte, error) {
+	return fake.xmlResponse, nil
 }
 
 type IndustryJobs struct {
