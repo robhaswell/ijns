@@ -60,17 +60,44 @@ func TestSuperceded(t *testing.T) {
 	}
 }
 
+// Jobs which are removed from the feed are forgotten about.
+func TestJobsAreRemoved(t *testing.T) {
+	xml := []byte(`<?xml version='1.0' encoding='UTF-8'?>
+<eveapi version="2">
+  <result>
+    <rowset name="jobs" key="jobID" columns="jobID,installerName,blueprintTypeName,endDate">
+      <row jobID="1" installerName="Fake Character" blueprintTypeName="Test Item I Blueprint" endDate="2020-01-01 01:01:01" />
+      <row jobID="2" installerName="Fake Character" blueprintTypeName="Test Item I Blueprint" endDate="2020-01-01 01:01:02" />
+    </rowset>
+  </result>
+</eveapi>`)
+	jobs, err := ParseXmlApiResponse(xml)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jobList := NewJobList(NewFakeAlerter())
+	jobList.SetJobs(jobs)
+
+	jobs = jobs[1:]
+	jobList.SetJobs(jobs)
+
+	if jobList.Count() != 1 {
+		t.Fatal("Unexpected elements in job list.")
+	}
+}
+
 func TestJobEquality(t *testing.T) {
 	j1 := Job{
 		ID:            1,
 		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
+		Installer:     "Fake Character",
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	j2 := Job{
 		ID:            1,
 		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
+		Installer:     "Fake Character",
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	if j1 != j2 {
@@ -92,7 +119,7 @@ func TestSlackAlert(t *testing.T) {
 	j1 := &Job{
 		ID:            1,
 		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
+		Installer:     "Fake Character",
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	alerter.Alert(j1, "agrakari")
@@ -180,15 +207,15 @@ func TestFarPastE2E(t *testing.T) {
 }
 
 // Duplicate jobs are only added once.
-func TestDuplicateJob(t *testing.T) {
-	xml := []byte(fmt.Sprintf(`<?xml version='1.0' encoding='UTF-8'?>
+func TestDuplicateJobE2E(t *testing.T) {
+	xml := []byte(`<?xml version='1.0' encoding='UTF-8'?>
 <eveapi version="2">
   <result>
     <rowset name="jobs" key="jobID" columns="jobID,installerName,blueprintTypeName,endDate">
-      <row jobID="1" installerName="Fake Character" blueprintTypeName="Test Item Blueprint I" endDate="%v" />
+      <row jobID="1" installerName="Fake Character" blueprintTypeName="Test Item Blueprint I" endDate="2020-01-01 01:01:01" />
     </rowset>
   </result>
-</eveapi>`, time.Now().UTC().Add(time.Hour).Format(DateFormat)))
+</eveapi>`)
 	requester := &FakeIndustryJobsRequester{}
 	requester.SetResponse(xml)
 

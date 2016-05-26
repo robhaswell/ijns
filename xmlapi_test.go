@@ -38,6 +38,6 @@ func TestParseXmlApiResponse(t *testing.T) {
 	}
 
 	if reflect.DeepEqual(result, expected) {
-		t.Fatalf("Unexpected result. Expected:\n\n%v\n\nGot:\n\n%", expected, result)
+		t.Fatalf("Unexpected result. Expected:\n\n%v\n\nGot:\n\n%v", expected, result)
 	}
 }
