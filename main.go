@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/jonboulle/clockwork"
 	"github.com/spf13/viper"
 )
 
@@ -38,7 +39,7 @@ func main() {
 	requester := NewXmlApiIndustryJobsRequester(viper.GetString("vcode"), viper.GetString("keyid"))
 	alerter := NewSlackAlerter(viper.GetString("slack_token"))
 
-	jobList := NewJobList(config, alerter)
+	jobList := NewJobList(config, clockwork.NewRealClock(), alerter)
 
 	for {
 		if err := mainLoop(jobList, requester); err != nil {

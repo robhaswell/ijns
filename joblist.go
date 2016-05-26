@@ -5,20 +5,23 @@ import (
 	"time"
 
 	"github.com/deckarep/golang-set"
+	"github.com/jonboulle/clockwork"
 )
 
 // Records jobs and creates alerts about them
 type JobList struct {
 	config  CharacterConfig
+	clock   clockwork.Clock
 	alerter Alerter
 	jobs    mapset.Set
 }
 
-func NewJobList(config CharacterConfig, alerter Alerter) *JobList {
+func NewJobList(config CharacterConfig, clock clockwork.Clock, alerter Alerter) *JobList {
 	return &JobList{
-		config: config,
+		config:  config,
+		clock:   clock,
 		alerter: alerter,
-		jobs: mapset.NewSet(),
+		jobs:    mapset.NewSet(),
 	}
 }
 
@@ -56,14 +59,16 @@ func (self *JobList) isInteresting(job *Job) bool {
 
 // Alert about the job 1 minute before its end date
 func (self *JobList) startAlertTimer(job *Job) {
-	duration := job.EndDate.Sub(time.Now()) - time.Minute
+	duration := job.EndDate.Sub(self.clock.Now()) - time.Minute
 	// Do not bother to create an alert if it is due in the past
 	if duration < 0 {
 		return
 	}
-	time.AfterFunc(duration, func() {
+	c := self.clock.After(duration)
+	go func() {
+		_ = <-c
 		self.Alert(job)
-	})
+	}()
 	log.Printf("Will alert about %s in %s", job.Blueprint, duration)
 }
 

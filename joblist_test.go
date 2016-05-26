@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/jonboulle/clockwork"
 	"github.com/spf13/viper"
 )
 
@@ -24,7 +25,7 @@ func TestSuperceded(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	jobList := NewJobList(NewTestCharacterConfig(), NewFakeAlerter())
+	jobList := NewJobList(NewTestCharacterConfig(), clockwork.NewFakeClock(), NewFakeAlerter())
 	jobList.SetJobs(jobs)
 
 	expected := true
@@ -74,7 +75,7 @@ func TestJobsAreRemoved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	jobList := NewJobList(NewTestCharacterConfig(), NewFakeAlerter())
+	jobList := NewJobList(NewTestCharacterConfig(), clockwork.NewFakeClock(), NewFakeAlerter())
 	jobList.SetJobs(jobs)
 
 	jobs = jobs[1:]
