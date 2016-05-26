@@ -37,9 +37,9 @@ IJNS is configured via environment variables, and these must be present for the 
 
 | Variable | Description | Example
 | --- | --- | --- |
-| IJNS_KEYID | An EVE API key ID with the `IndustryJobs` permission. This must be a **Corporation** API key. [Click here to create one](https://community.eveonline.com/support/api-key/CreatePredefined?accessMask=128) | 1234567 |
+| IJNS_KEYID | An EVE API key ID with the `IndustryJobs` permission. This must be a **Corporation** API key. [Click here to create one](https://community.eveonline.com/support/api-key/CreatePredefined?accessMask=128). | 1234567 |
 | IJNS_VCODE | An EVE API verification code. See above. | abcdefghijklmnopqrtsuvwxyz1234567890 |
-| IJNS_SLACK_TOKEN | A token for the Slack Bot API. [Click here to create one](https://my.slack.com/services/new/bot) | abcd-123456789-abcdefghhijk1234567890 |
+| IJNS_SLACK_TOKEN | A token for the Slack Bot API. [Click here to create one](https://my.slack.com/services/new/bot). | abcd-123456789-abcdefghhijk1234567890 |
 | IJNS_CHARACTERS | A JSON array which maps Slack userames (to be notified) onto a list of EVE Character names. The Slack username will be notified about those characters' jobs. | `{"slack_username":["EVE Character 1", "EVE Character 2"], "slack_other_username":["EVE Character 3"]}` |
 
 # Bug reports & contributing
