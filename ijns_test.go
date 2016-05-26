@@ -9,74 +9,52 @@ import (
 )
 
 func TestSuperceded(t *testing.T) {
-	allJobs = make(map[Job]bool)
-	j1 := Job{
-		ID:            1,
-		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
-		EndDateString: "2020-01-01 01:01:01",
+	xml := []byte(`<?xml version='1.0' encoding='UTF-8'?>
+<eveapi version="2">
+  <result>
+    <rowset name="jobs" key="jobID" columns="jobID,installerName,blueprintTypeName,endDate">
+      <row jobID="1" installerName="Fake Character" blueprintTypeName="Test Item I Blueprint" endDate="2020-01-01 01:01:01" />
+      <row jobID="2" installerName="Fake Character" blueprintTypeName="Test Item I Blueprint" endDate="2020-01-01 01:01:02" />
+      <row jobID="3" installerName="Fake Character" blueprintTypeName="Test Item I Blueprint" endDate="2020-01-01 01:02:03" />
+      <row jobID="4" installerName="Fake Character" blueprintTypeName="Test Item I Blueprint" endDate="2020-01-01 02:02:03" />
+      <row jobID="5" installerName="Fake Character" blueprintTypeName="Test Item I Blueprint" endDate="2020-01-01 02:02:03" />
+    </rowset>
+  </result>
+</eveapi>`)
+	jobs, err := ParseXmlApiResponse(xml)
+	if err != nil {
+		t.Fatal(err)
 	}
-	j1.ParseDate()
-	j2 := Job{
-		ID:            2,
-		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
-		EndDateString: "2020-01-01 01:01:02",
-	}
-	j2.ParseDate()
-	j3 := Job{
-		ID:            3,
-		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
-		EndDateString: "2020-01-01 01:02:03",
-	}
-	j3.ParseDate()
-	j4 := Job{
-		ID:            4,
-		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
-		EndDateString: "2020-01-01 02:02:03",
-	}
-	j4.ParseDate()
-	j5 := Job{
-		ID:            5,
-		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
-		EndDateString: "2020-01-01 02:02:03",
-	}
-	j5.ParseDate()
-	allJobs[j1] = true
-	allJobs[j2] = true
-	allJobs[j3] = true
-	allJobs[j4] = true
-	allJobs[j5] = true
+
+	jobList := NewJobList(NewFakeAlerter())
+	jobList.SetJobs(jobs)
 
 	expected := true
-	result := j1.IsSuperceded()
+	result := jobList.IsSuperceded(jobs[0])
 	if expected != result {
 		t.Fatal("Unexpected result", result)
 	}
 
 	expected = false
-	result = j2.IsSuperceded()
+	result = jobList.IsSuperceded(jobs[1])
 	if expected != result {
 		t.Fatal("Unexpected result", result)
 	}
 
 	expected = false
-	result = j3.IsSuperceded()
+	result = jobList.IsSuperceded(jobs[2])
 	if expected != result {
 		t.Fatal("Unexpected result", result)
 	}
 
 	expected = true
-	result = j4.IsSuperceded()
+	result = jobList.IsSuperceded(jobs[3])
 	if expected != result {
 		t.Fatal("Unexpected result", result)
 	}
 
 	expected = false
-	result = j5.IsSuperceded()
+	result = jobList.IsSuperceded(jobs[4])
 	if expected != result {
 		t.Fatal("Unexpected result", result)
 	}
@@ -97,39 +75,6 @@ func TestJobEquality(t *testing.T) {
 	}
 	if j1 != j2 {
 		t.Fatal("Jobs are not equal")
-	}
-}
-
-func TestAddJob(t *testing.T) {
-	alerter := &FakeAlerter{}
-	allJobs = make(map[Job]bool)
-	j1 := Job{
-		ID:            1,
-		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
-		EndDateString: "2020-01-01 01:01:01",
-	}
-	j2 := Job{
-		ID:            1,
-		Blueprint:     "Test Item Blueprint I",
-		Installer:     "Maaya Saraki",
-		EndDateString: "2020-01-01 01:01:01",
-	}
-
-	if j1 != j2 {
-		t.Fatal("Jobs are not equal")
-	}
-
-	var added bool
-
-	added = addJob(j1, alerter)
-	if !added {
-		t.Fatal("Should have added first job")
-	}
-
-	added = addJob(j2, alerter)
-	if added {
-		t.Fatal("Should not have added second job")
 	}
 }
 
@@ -167,8 +112,9 @@ func TestSimpleE2E (t *testing.T) {
 	requester.SetResponse(xml)
 
 	alerter := NewFakeAlerter()
+	jobList := NewJobList(alerter)
 
-	if err := mainLoop(requester, alerter); err != nil {
+	if err := mainLoop(jobList, requester); err != nil {
 		t.Fatal(err)
 	}
 
@@ -193,8 +139,9 @@ func TestNearFutureE2E (t *testing.T) {
 	requester.SetResponse(xml)
 
 	alerter := NewFakeAlerter()
+	jobList := NewJobList(alerter)
 
-	if err := mainLoop(requester, alerter); err != nil {
+	if err := mainLoop(jobList, requester); err != nil {
 		t.Fatal(err)
 	}
 
@@ -205,7 +152,7 @@ func TestNearFutureE2E (t *testing.T) {
 	}
 }
 
-// XML containing a job in the far pastt does not result in an alert
+// XML containing a job in the far past does not result in an alert
 func TestFarPastE2E (t *testing.T) {
 	xml := []byte(fmt.Sprintf(`<?xml version='1.0' encoding='UTF-8'?>
 <eveapi version="2">
@@ -219,8 +166,9 @@ func TestFarPastE2E (t *testing.T) {
 	requester.SetResponse(xml)
 
 	alerter := NewFakeAlerter()
+	jobList := NewJobList(alerter)
 
-	if err := mainLoop(requester, alerter); err != nil {
+	if err := mainLoop(jobList, requester); err != nil {
 		t.Fatal(err)
 	}
 
@@ -228,5 +176,34 @@ func TestFarPastE2E (t *testing.T) {
 	case event := <-alerter.Chan:
 		t.Fatal("Unexpected alert event", event)
 	default:
+	}
+}
+
+// Duplicate jobs are only added once.
+func TestDuplicateJob(t *testing.T) {
+	xml := []byte(fmt.Sprintf(`<?xml version='1.0' encoding='UTF-8'?>
+<eveapi version="2">
+  <result>
+    <rowset name="jobs" key="jobID" columns="jobID,installerName,blueprintTypeName,endDate">
+      <row jobID="1" installerName="Fake Character" blueprintTypeName="Test Item Blueprint I" endDate="%v" />
+    </rowset>
+  </result>
+</eveapi>`, time.Now().UTC().Add(time.Hour).Format(DateFormat)))
+	requester := &FakeIndustryJobsRequester{}
+	requester.SetResponse(xml)
+
+	alerter := NewFakeAlerter()
+	jobList := NewJobList(alerter)
+
+	// Consume the XML once
+	if err := mainLoop(jobList, requester); err != nil {
+		t.Fatal(err)
+	}
+	// Now consume it again
+	if err := mainLoop(jobList, requester); err != nil {
+		t.Fatal(err)
+	}
+	if jobList.Count() != 1 {
+		t.Fatal("Unexpected jobs: ", jobList.String())
 	}
 }

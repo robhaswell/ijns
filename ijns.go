@@ -1,56 +1,106 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/spf13/viper"
+	"github.com/deckarep/golang-set"
 )
 
 const SLACK_NAME = "agrakari"
 
 var CHARACTERS = map[string]bool{"Maaya Saraki": true, "Indy Drone 4": true, "Fake Character": true}
 
-func (self *Job) ParseDate() error {
-	endDate, err := time.Parse(DateFormat, self.EndDateString)
-	self.EndDate = endDate
-	return err
+// Records jobs and creates alerts about them
+type JobList struct {
+	alerter Alerter
+	jobs mapset.Set
 }
 
-// Alert 1 minute before the job is due to complete
-func (self *Job) MakeAlert() {
-	duration := self.EndDate.Sub(time.Now()) - time.Minute
-	time.AfterFunc(duration, self.Alert)
-	log.Printf("Will alert about %s in %s", self.Blueprint, duration)
+func NewJobList(alerter Alerter) *JobList {
+	jobList := &JobList{}
+	jobList.Init(alerter)
+	return jobList
 }
-func (self *Job) Alert() {
-	if self.IsSuperceded() {
+
+func (self *JobList) Init(alerter Alerter) {
+	self.alerter = alerter
+	self.jobs = mapset.NewSet()
+}
+
+func (self *JobList) Count() int {
+	return self.jobs.Cardinality()
+}
+
+func (self *JobList) String() string {
+	return self.jobs.String()
+}
+
+// Given the current complete list of Jobs read from the jobs API, record
+// interesting jobs and initialise alerts.
+func (self *JobList) SetJobs(jobs []Job) {
+	currentJobs := mapset.NewSet()
+	for _, job := range(jobs) {
+		if self.isInteresting(&job) {
+			currentJobs.Add(job)
+		}
+	}
+	newJobs := currentJobs.Difference(self.jobs)
+	// TODO add a lock around this
+	self.jobs = currentJobs
+
+	for newJobInterface := range(newJobs.Iter()) {
+		newJob := newJobInterface.(Job)
+		self.startAlertTimer(&newJob)
+	}
+}
+
+// A job is interesting if it belongs to a configured character.
+func (self *JobList) isInteresting(job *Job) bool {
+	_, ok := CHARACTERS[job.Installer]
+	return ok
+}
+
+// Alert about the job 1 minute before its end date
+func (self *JobList) startAlertTimer(job *Job) {
+	duration := job.EndDate.Sub(time.Now()) - time.Minute
+	// Do not bother to create an alert if it is due in the past
+	if duration < 0 {
 		return
 	}
-	self.Alerter.Alert(self, SLACK_NAME)
+	time.AfterFunc(duration, func() {
+		self.Alert(job)
+	})
+	log.Printf("Will alert about %s in %s", job.Blueprint, duration)
 }
-func (self *Job) String() string {
-	return fmt.Sprintf("%s // %s will be delivered in 1 minute", self.Installer, self.Blueprint)
+
+func (self *JobList) Alert(job *Job) {
+	// Do not bother if it is superceded
+	if self.IsSuperceded(*job) {
+		return
+	}
+	self.alerter.Alert(job, SLACK_NAME)
 }
 
 // If there is another job for the same blueprint & character due within the
 // next minute, return false
-func (self Job) IsSuperceded() bool {
-	for job := range allJobs {
-		if job == self {
+func (self *JobList) IsSuperceded(job Job) bool {
+	for otherJobInterface := range(self.jobs.Iter()) {
+		otherJob := otherJobInterface.(Job)
+		if job == otherJob {
 			continue
 		}
-		if job.Installer != self.Installer {
+		if job.Installer != otherJob.Installer {
 			continue
 		}
-		if job.Blueprint != self.Blueprint {
+		if job.Blueprint != otherJob.Blueprint {
 			continue
 		}
-		delta := job.EndDate.Sub(self.EndDate)
+		delta := otherJob.EndDate.Sub(job.EndDate)
 		// For jobs at identical times, the highest ID wins
 		if delta == 0 {
-			return self.ID < job.ID
+			return job.ID < otherJob.ID
 		}
 		if delta > 0 && delta <= time.Minute {
 			return true
@@ -59,11 +109,7 @@ func (self Job) IsSuperceded() bool {
 	return false
 }
 
-var allJobs = make(map[Job]bool)
-
-const DateFormat = "2006-01-02 15:04:05"
-
-func mainLoop(requester IndustryJobsRequester, alerter Alerter) error {
+func mainLoop(jobList *JobList, requester IndustryJobsRequester) error {
 	body, err := requester.GetXML()
 	if err != nil {
 		return err
@@ -76,37 +122,8 @@ func mainLoop(requester IndustryJobsRequester, alerter Alerter) error {
 
 	log.Printf("Retrieved %d jobs", len(jobs))
 
-	activeJobIDs := make(map[int]bool)
-
-	for _, job := range jobs {
-		addJob(job, alerter)
-		activeJobIDs[job.ID] = true
-	}
-	// Prune the list of jobs
-	for job := range allJobs {
-		if !activeJobIDs[job.ID] {
-			log.Printf("Deleting job %d", job.ID)
-			delete(allJobs, job)
-		}
-	}
+	jobList.SetJobs(jobs)
 	return nil
-}
-
-// Add a job if it is interesting and does not exist, and return whether it
-// was added.
-func addJob(job Job, alerter Alerter) bool {
-	if _, ok := CHARACTERS[job.Installer]; ok {
-		// TODO stop poking into the job here
-		job.ParseDate()
-		// TODO job should not alert themselves
-		job.Alerter = alerter
-		if _, ok := allJobs[job]; !ok {
-			job.MakeAlert()
-			allJobs[job] = true
-			return true
-		}
-	}
-	return false
 }
 
 func main() {
@@ -118,8 +135,10 @@ func main() {
 	requester := NewXmlApiIndustryJobsRequester(viper.GetString("vcode"), viper.GetString("keyid"))
 	alerter := NewSlackAlerter(viper.GetString("slack_token"))
 
+	jobList := NewJobList(alerter)
+
 	for {
-		if err := mainLoop(requester, alerter); err != nil {
+		if err := mainLoop(jobList, requester); err != nil {
 			log.Print(err)
 		}
 		time.Sleep(15 * time.Minute)

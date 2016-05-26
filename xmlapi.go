@@ -63,11 +63,25 @@ type Job struct {
 	Installer     string   `xml:"installerName,attr"`
 	EndDateString string   `xml:"endDate,attr"`
 	EndDate       time.Time
-	Alerter       Alerter
+}
+
+func (self *Job) String() string {
+	return fmt.Sprintf("%s // %s will be delivered in 1 minute", self.Installer, self.Blueprint)
+}
+
+const DateFormat = "2006-01-02 15:04:05"
+
+func (self *Job) ParseDate() error {
+	endDate, err := time.Parse(DateFormat, self.EndDateString)
+	self.EndDate = endDate
+	return err
 }
 
 func ParseXmlApiResponse(body []byte) ([]Job, error) {
 	jobs := IndustryJobs{}
 	err := xml.Unmarshal(body, &jobs)
+	for i, _ := range(jobs.Jobs) {
+		jobs.Jobs[i].ParseDate()
+	}
 	return jobs.Jobs, err
 }
