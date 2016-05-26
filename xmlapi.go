@@ -80,7 +80,7 @@ func (self *Job) ParseDate() error {
 func ParseXmlApiResponse(body []byte) ([]Job, error) {
 	jobs := IndustryJobs{}
 	err := xml.Unmarshal(body, &jobs)
-	for i, _ := range(jobs.Jobs) {
+	for i, _ := range jobs.Jobs {
 		jobs.Jobs[i].ParseDate()
 	}
 	return jobs.Jobs, err

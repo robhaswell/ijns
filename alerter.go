@@ -45,6 +45,6 @@ func (s *FakeAlerter) Alert(job *Job, username string) {
 }
 
 type FakeAlertEvent struct {
-	Job *Job
+	Job      *Job
 	Username string
 }

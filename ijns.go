@@ -4,8 +4,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/spf13/viper"
 	"github.com/deckarep/golang-set"
+	"github.com/spf13/viper"
 )
 
 const SLACK_NAME = "agrakari"
@@ -15,7 +15,7 @@ var CHARACTERS = map[string]bool{"Maaya Saraki": true, "Indy Drone 4": true, "Fa
 // Records jobs and creates alerts about them
 type JobList struct {
 	alerter Alerter
-	jobs mapset.Set
+	jobs    mapset.Set
 }
 
 func NewJobList(alerter Alerter) *JobList {
@@ -41,7 +41,7 @@ func (self *JobList) String() string {
 // interesting jobs and initialise alerts.
 func (self *JobList) SetJobs(jobs []Job) {
 	currentJobs := mapset.NewSet()
-	for _, job := range(jobs) {
+	for _, job := range jobs {
 		if self.isInteresting(&job) {
 			currentJobs.Add(job)
 		}
@@ -50,7 +50,7 @@ func (self *JobList) SetJobs(jobs []Job) {
 	// TODO add a lock around this
 	self.jobs = currentJobs
 
-	for newJobInterface := range(newJobs.Iter()) {
+	for newJobInterface := range newJobs.Iter() {
 		newJob := newJobInterface.(Job)
 		self.startAlertTimer(&newJob)
 	}
@@ -86,7 +86,7 @@ func (self *JobList) Alert(job *Job) {
 // If there is another job for the same blueprint & character due within the
 // next minute, return false
 func (self *JobList) IsSuperceded(job Job) bool {
-	for otherJobInterface := range(self.jobs.Iter()) {
+	for otherJobInterface := range self.jobs.Iter() {
 		otherJob := otherJobInterface.(Job)
 		if job == otherJob {
 			continue
