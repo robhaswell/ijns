@@ -7,10 +7,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-const SLACK_NAME = "agrakari"
-
-var CHARACTERS = map[string]bool{"Maaya Saraki": true, "Indy Drone 4": true, "Fake Character": true}
-
 func mainLoop(jobList *JobList, requester IndustryJobsRequester) error {
 	body, err := requester.GetXML()
 	if err != nil {
@@ -33,11 +29,16 @@ func main() {
 	viper.BindEnv("vcode")
 	viper.BindEnv("keyid")
 	viper.BindEnv("slack_token")
+	viper.BindEnv("characters")
 
+	config, err := NewJsonCharacterConfig(viper.GetString("characters"))
+	if err != nil {
+		log.Fatalf("Invalid JSON in env IJNS_CHARACTERS=%s: %v", viper.GetString("characters"), err)
+	}
 	requester := NewXmlApiIndustryJobsRequester(viper.GetString("vcode"), viper.GetString("keyid"))
 	alerter := NewSlackAlerter(viper.GetString("slack_token"))
 
-	jobList := NewJobList(alerter)
+	jobList := NewJobList(config, alerter)
 
 	for {
 		if err := mainLoop(jobList, requester); err != nil {

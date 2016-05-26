@@ -20,7 +20,7 @@ func TestSimpleE2E(t *testing.T) {
 	requester.SetResponse(xml)
 
 	alerter := NewFakeAlerter()
-	jobList := NewJobList(alerter)
+	jobList := NewJobList(NewTestCharacterConfig(), alerter)
 
 	if err := mainLoop(jobList, requester); err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func TestNearFutureE2E(t *testing.T) {
 	requester.SetResponse(xml)
 
 	alerter := NewFakeAlerter()
-	jobList := NewJobList(alerter)
+	jobList := NewJobList(NewTestCharacterConfig(), alerter)
 
 	if err := mainLoop(jobList, requester); err != nil {
 		t.Fatal(err)
@@ -74,7 +74,7 @@ func TestFarPastE2E(t *testing.T) {
 	requester.SetResponse(xml)
 
 	alerter := NewFakeAlerter()
-	jobList := NewJobList(alerter)
+	jobList := NewJobList(NewTestCharacterConfig(), alerter)
 
 	if err := mainLoop(jobList, requester); err != nil {
 		t.Fatal(err)
@@ -101,7 +101,7 @@ func TestDuplicateJobE2E(t *testing.T) {
 	requester.SetResponse(xml)
 
 	alerter := NewFakeAlerter()
-	jobList := NewJobList(alerter)
+	jobList := NewJobList(NewTestCharacterConfig(), alerter)
 
 	// Consume the XML once
 	if err := mainLoop(jobList, requester); err != nil {

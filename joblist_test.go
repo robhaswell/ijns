@@ -24,7 +24,7 @@ func TestSuperceded(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	jobList := NewJobList(NewFakeAlerter())
+	jobList := NewJobList(NewTestCharacterConfig(), NewFakeAlerter())
 	jobList.SetJobs(jobs)
 
 	expected := true
@@ -74,7 +74,7 @@ func TestJobsAreRemoved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	jobList := NewJobList(NewFakeAlerter())
+	jobList := NewJobList(NewTestCharacterConfig(), NewFakeAlerter())
 	jobList.SetJobs(jobs)
 
 	jobs = jobs[1:]

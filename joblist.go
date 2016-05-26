@@ -9,19 +9,17 @@ import (
 
 // Records jobs and creates alerts about them
 type JobList struct {
+	config  CharacterConfig
 	alerter Alerter
 	jobs    mapset.Set
 }
 
-func NewJobList(alerter Alerter) *JobList {
-	jobList := &JobList{}
-	jobList.Init(alerter)
-	return jobList
-}
-
-func (self *JobList) Init(alerter Alerter) {
-	self.alerter = alerter
-	self.jobs = mapset.NewSet()
+func NewJobList(config CharacterConfig, alerter Alerter) *JobList {
+	return &JobList{
+		config: config,
+		alerter: alerter,
+		jobs: mapset.NewSet(),
+	}
 }
 
 func (self *JobList) Count() int {
@@ -53,8 +51,7 @@ func (self *JobList) SetJobs(jobs []Job) {
 
 // A job is interesting if it belongs to a configured character.
 func (self *JobList) isInteresting(job *Job) bool {
-	_, ok := CHARACTERS[job.Installer]
-	return ok
+	return self.config.CharacterSet().Contains(job.Installer)
 }
 
 // Alert about the job 1 minute before its end date
@@ -75,7 +72,7 @@ func (self *JobList) Alert(job *Job) {
 	if self.IsSuperceded(*job) {
 		return
 	}
-	self.alerter.Alert(job, SLACK_NAME)
+	self.alerter.Alert(job, self.config.AlertUsername(job.Installer))
 }
 
 // If there is another job for the same blueprint & character due within the
