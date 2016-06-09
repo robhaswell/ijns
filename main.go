@@ -36,10 +36,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Invalid JSON in env IJNS_CHARACTERS=%s: %v", viper.GetString("characters"), err)
 	}
+
+	clock := clockwork.NewRealClock()
+
 	requester := NewXmlApiIndustryJobsRequester(viper.GetString("vcode"), viper.GetString("keyid"))
 	alerter := NewSlackAlerter(viper.GetString("slack_token"))
 
 	jobList := NewJobList(config, clockwork.NewRealClock(), alerter)
+	fetcher := NewFetcher(jobList.Ch, requester, clock)
+
+	// Begin the job requesting thread
+	go fetcher.Loop()
 
 	for {
 		if err := mainLoop(jobList, requester); err != nil {

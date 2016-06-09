@@ -80,7 +80,7 @@ func TestFutureE2E(t *testing.T) {
       <row jobID="1" installerName="Fake Character" blueprintTypeName="Test Item Blueprint I" endDate="%v" />
     </rowset>
   </result>
-</eveapi>`, clock.Now().UTC().Add(time.Minute + 30*time.Second).Format(DateFormat)))
+</eveapi>`, clock.Now().UTC().Add(time.Minute+30*time.Second).Format(DateFormat)))
 	requester := &FakeIndustryJobsRequester{}
 	requester.SetResponse(xml)
 

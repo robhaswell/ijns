@@ -14,6 +14,7 @@ type JobList struct {
 	clock   clockwork.Clock
 	alerter Alerter
 	jobs    mapset.Set
+	Ch      chan ([]Job)
 }
 
 func NewJobList(config CharacterConfig, clock clockwork.Clock, alerter Alerter) *JobList {
@@ -22,6 +23,7 @@ func NewJobList(config CharacterConfig, clock clockwork.Clock, alerter Alerter) 
 		clock:   clock,
 		alerter: alerter,
 		jobs:    mapset.NewSet(),
+		Ch:      make(chan ([]Job)),
 	}
 }
 
