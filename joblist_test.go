@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	"github.com/jonboulle/clockwork"
 	"github.com/spf13/viper"
@@ -122,4 +123,42 @@ func TestSlackAlert(t *testing.T) {
 		EndDateString: "2020-01-01 01:01:01",
 	}
 	alerter.Alert(j1, "agrakari")
+}
+
+func TestIsRipe(t *testing.T) {
+	clock := clockwork.NewFakeClock()
+	jobList := NewJobList(NewTestCharacterConfig(), clock, NewFakeAlerter())
+
+	now := clock.Now()
+
+	job := &Job{
+		ID:        1,
+		Blueprint: "Test Item Blueprint I",
+		Installer: "Fake Character",
+	}
+
+	job.EndDate = now.Add(time.Minute + time.Second)
+	expected := false
+	result := jobList.IsRipe(job)
+
+	if result != expected {
+		t.Fatal("Unexpected IsRipe() result:", result)
+	}
+
+	job.EndDate = now.Add(time.Minute - time.Second)
+	expected = true
+	result = jobList.IsRipe(job)
+
+	if result != expected {
+		t.Fatal("Unexpected IsRipe() result:", result)
+	}
+
+	job.EndDate = now.Add(time.Minute)
+	expected = true
+	result = jobList.IsRipe(job)
+
+	if result != expected {
+		t.Fatal("Unexpected IsRipe() result:", result)
+	}
+
 }

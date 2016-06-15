@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"time"
 
 	"github.com/deckarep/golang-set"
@@ -23,7 +22,7 @@ func NewJobList(config CharacterConfig, clock clockwork.Clock, alerter Alerter) 
 		clock:   clock,
 		alerter: alerter,
 		jobs:    mapset.NewSet(),
-		Ch:      make(chan ([]Job)),
+		Ch:      make(chan ([]Job), 1),
 	}
 }
 
@@ -35,51 +34,62 @@ func (self *JobList) String() string {
 	return self.jobs.String()
 }
 
+// Once per second, call the Tick() function.
+func (self *JobList) Loop() {
+	for {
+		self.Tick()
+		self.clock.Sleep(time.Second)
+	}
+}
+
+// Look for new lists of jobs and process any alerts.
+func (self *JobList) Tick() {
+	select {
+	case jobs := <-self.Ch:
+		self.SetJobs(jobs)
+	default:
+	}
+
+	// Search for jobs which are ripe and have not yet been alerted.
+	for jobInterface := range self.jobs.Iter() {
+		job := jobInterface.(Job)
+		if !self.IsRipe(&job) {
+			continue
+		}
+		if job.Alerted {
+			continue
+		}
+		self.Alert(&job)
+	}
+}
+
 // Given the current complete list of Jobs read from the jobs API, record
 // interesting jobs and initialise alerts.
 func (self *JobList) SetJobs(jobs []Job) {
-	currentJobs := mapset.NewSet()
+	// TODO Prune the list of jobs
+	validJobs := mapset.NewSet()
 	for _, job := range jobs {
-		if self.isInteresting(&job) {
-			currentJobs.Add(job)
+		validJobs.Add(job)
+		if self.IsInteresting(&job) {
+			// If the Job is ripe then we mark it as already alerted, in case
+			// we are just restarting.
+			if self.IsRipe(&job) {
+				job.Alerted = true
+			}
+			self.jobs.Add(job)
 		}
 	}
-	newJobs := currentJobs.Difference(self.jobs)
-	// TODO add a lock around this
-	self.jobs = currentJobs
-
-	for newJobInterface := range newJobs.Iter() {
-		newJob := newJobInterface.(Job)
-		self.startAlertTimer(&newJob)
-	}
+	self.jobs = self.jobs.Intersect(validJobs)
 }
 
 // A job is interesting if it belongs to a configured character.
-func (self *JobList) isInteresting(job *Job) bool {
+func (self *JobList) IsInteresting(job *Job) bool {
 	return self.config.CharacterSet().Contains(job.Installer)
 }
 
-// Alert about the job 1 minute before its end date
-func (self *JobList) startAlertTimer(job *Job) {
-	duration := job.EndDate.Sub(self.clock.Now()) - time.Minute
-	// Do not bother to create an alert if it is due in the past
-	if duration < 0 {
-		return
-	}
-	c := self.clock.After(duration)
-	go func() {
-		_ = <-c
-		self.Alert(job)
-	}()
-	log.Printf("Will alert about %s in %s", job.Blueprint, duration)
-}
-
-func (self *JobList) Alert(job *Job) {
-	// Do not bother if it is superceded
-	if self.IsSuperceded(*job) {
-		return
-	}
-	self.alerter.Alert(job, self.config.AlertUsername(job.Installer))
+// A job is ripe if it is ready to be alerted about.
+func (self *JobList) IsRipe(job *Job) bool {
+	return job.EndDate.Sub(self.clock.Now()) <= time.Minute
 }
 
 // If there is another job for the same blueprint & character due within the
@@ -106,4 +116,16 @@ func (self *JobList) IsSuperceded(job Job) bool {
 		}
 	}
 	return false
+}
+
+func (self *JobList) Alert(job *Job) {
+	self.alerter.Alert(job, self.config.AlertUsername(job.Installer))
+	self.SetAlerted(job)
+}
+
+// Set the job as being alered by removing and adding the job
+func (self *JobList) SetAlerted(job *Job) {
+	job.Alerted = true
+	self.jobs.Remove(job)
+	self.jobs.Add(job)
 }

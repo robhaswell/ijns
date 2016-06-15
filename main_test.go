@@ -25,17 +25,25 @@ func TestSimpleE2E(t *testing.T) {
 	alerter := NewFakeAlerter()
 	jobList := NewJobList(NewTestCharacterConfig(), clock, alerter)
 
-	if err := mainLoop(jobList, requester); err != nil {
+	fetcher := NewFetcher(clock, jobList.Ch, requester)
+
+	// Read the XML
+	if err := fetcher.Poll(); err != nil {
 		t.Fatal(err)
 	}
+	jobList.Tick()
 
-	clock.BlockUntil(1)
 	clock.Advance(time.Second)
 
-	event := <-alerter.Chan
+	jobList.Tick()
 
-	if event.Job.ID != 1 {
-		t.Fatal("Unexpected alert event", event)
+	select {
+	case event := <-alerter.Chan:
+		if event.Job.ID != 1 {
+			t.Fatal("Unexpected alert event", event)
+		}
+	default:
+		t.Fatal("No alert event.")
 	}
 }
 
@@ -56,12 +64,17 @@ func TestNearFutureE2E(t *testing.T) {
 	alerter := NewFakeAlerter()
 	jobList := NewJobList(NewTestCharacterConfig(), clock, alerter)
 
-	if err := mainLoop(jobList, requester); err != nil {
+	fetcher := NewFetcher(clock, jobList.Ch, requester)
+
+	// Read the XML
+	if err := fetcher.Poll(); err != nil {
 		t.Fatal(err)
 	}
+	jobList.Tick()
 
-	clock.BlockUntil(0)
 	clock.Advance(time.Minute)
+
+	jobList.Tick()
 
 	select {
 	case event := <-alerter.Chan:
@@ -70,7 +83,7 @@ func TestNearFutureE2E(t *testing.T) {
 	}
 }
 
-// XML containing a job 1m30s in the future does not result in an alert after 1m
+// XML containing a job 2m30s in the future does not result in an alert after 1m
 func TestFutureE2E(t *testing.T) {
 	clock := clockwork.NewFakeClock()
 	xml := []byte(fmt.Sprintf(`<?xml version='1.0' encoding='UTF-8'?>
@@ -80,19 +93,24 @@ func TestFutureE2E(t *testing.T) {
       <row jobID="1" installerName="Fake Character" blueprintTypeName="Test Item Blueprint I" endDate="%v" />
     </rowset>
   </result>
-</eveapi>`, clock.Now().UTC().Add(time.Minute+30*time.Second).Format(DateFormat)))
+</eveapi>`, clock.Now().UTC().Add(2*time.Minute + 30*time.Second).Format(DateFormat)))
 	requester := &FakeIndustryJobsRequester{}
 	requester.SetResponse(xml)
 
 	alerter := NewFakeAlerter()
 	jobList := NewJobList(NewTestCharacterConfig(), clock, alerter)
 
-	if err := mainLoop(jobList, requester); err != nil {
+	fetcher := NewFetcher(clock, jobList.Ch, requester)
+
+	// Read the XML
+	if err := fetcher.Poll(); err != nil {
 		t.Fatal(err)
 	}
+	jobList.Tick()
 
-	clock.BlockUntil(1)
 	clock.Advance(time.Minute)
+
+	jobList.Tick()
 
 	select {
 	case event := <-alerter.Chan:
@@ -118,12 +136,15 @@ func TestFarPastE2E(t *testing.T) {
 	alerter := NewFakeAlerter()
 	jobList := NewJobList(NewTestCharacterConfig(), clock, alerter)
 
-	if err := mainLoop(jobList, requester); err != nil {
-		t.Fatal(err)
-	}
+	fetcher := NewFetcher(clock, jobList.Ch, requester)
 
-	clock.BlockUntil(0)
+	// Read the XML
+	fetcher.Poll()
+	jobList.Tick()
+
 	clock.Advance(time.Minute)
+
+	jobList.Tick()
 
 	select {
 	case event := <-alerter.Chan:
@@ -148,14 +169,20 @@ func TestDuplicateJobE2E(t *testing.T) {
 	alerter := NewFakeAlerter()
 	jobList := NewJobList(NewTestCharacterConfig(), clockwork.NewFakeClock(), alerter)
 
-	// Consume the XML once
-	if err := mainLoop(jobList, requester); err != nil {
+	fetcher := NewFetcher(clockwork.NewFakeClock(), jobList.Ch, requester)
+
+	// Read the XML
+	if err := fetcher.Poll(); err != nil {
 		t.Fatal(err)
 	}
+	jobList.Tick()
+
 	// Now consume it again
-	if err := mainLoop(jobList, requester); err != nil {
+	if err := fetcher.Poll(); err != nil {
 		t.Fatal(err)
 	}
+	jobList.Tick()
+
 	if jobList.Count() != 1 {
 		t.Fatal("Unexpected jobs: ", jobList.String())
 	}

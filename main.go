@@ -2,28 +2,10 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/jonboulle/clockwork"
 	"github.com/spf13/viper"
 )
-
-func mainLoop(jobList *JobList, requester IndustryJobsRequester) error {
-	body, err := requester.GetXML()
-	if err != nil {
-		return err
-	}
-
-	jobs, err := ParseXmlApiResponse(body)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Retrieved %d jobs", len(jobs))
-
-	jobList.SetJobs(jobs)
-	return nil
-}
 
 func main() {
 	viper.SetEnvPrefix("ijns")
@@ -42,16 +24,12 @@ func main() {
 	requester := NewXmlApiIndustryJobsRequester(viper.GetString("vcode"), viper.GetString("keyid"))
 	alerter := NewSlackAlerter(viper.GetString("slack_token"))
 
-	jobList := NewJobList(config, clockwork.NewRealClock(), alerter)
-	fetcher := NewFetcher(jobList.Ch, requester, clock)
+	jobList := NewJobList(config, clock, alerter)
+	fetcher := NewFetcher(clock, jobList.Ch, requester)
 
 	// Begin the job requesting thread
 	go fetcher.Loop()
 
-	for {
-		if err := mainLoop(jobList, requester); err != nil {
-			log.Print(err)
-		}
-		time.Sleep(15 * time.Minute)
-	}
+	// Begin the primary job collection and alerting thread.
+	jobList.Loop()
 }

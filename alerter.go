@@ -36,7 +36,7 @@ type FakeAlerter struct {
 
 func NewFakeAlerter() *FakeAlerter {
 	fake := FakeAlerter{}
-	fake.Chan = make(chan FakeAlertEvent)
+	fake.Chan = make(chan FakeAlertEvent, 1)
 	return &fake
 }
 

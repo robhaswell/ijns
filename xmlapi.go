@@ -63,6 +63,7 @@ type Job struct {
 	Installer     string   `xml:"installerName,attr"`
 	EndDateString string   `xml:"endDate,attr"`
 	EndDate       time.Time
+	Alerted       bool // A flag for if the job has been alerted yet or not.
 }
 
 func (self *Job) String() string {
